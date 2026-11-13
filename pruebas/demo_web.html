@@ -1,0 +1,228 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>Auditorio Plata - Laboratorio</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: #0b1120;
+            color: #e2e8f0;
+            font-family: Arial, sans-serif;
+        }
+
+        header {
+            padding: 35px 20px;
+            text-align: center;
+            background: #172238;
+        }
+
+        header h1 { margin: 0 0 12px; }
+
+        main {
+            max-width: 1100px;
+            margin: 35px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .panel {
+            border: 1px solid #475569;
+            background: #172238;
+            padding: 24px;
+            border-radius: 14px;
+            min-width: 0;
+        }
+
+        h2 { margin-top: 0; }
+
+        button {
+            width: 100%;
+            border: 0;
+            border-radius: 9px;
+            padding: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 18px;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: wait;
+        }
+
+        .inseguro { background: #fca5a5; }
+        .seguro { background: #86efac; }
+
+        .metricas {
+            line-height: 2;
+            margin-bottom: 15px;
+        }
+
+        .tabla {
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 13px;
+        }
+
+        th, td {
+            border-bottom: 1px solid #475569;
+            padding: 9px 6px;
+            text-align: left;
+        }
+
+        th { color: #cbd5e1; }
+
+        .exito { color: #86efac; }
+        .rechazo { color: #fca5a5; }
+
+        .nota {
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 800px) {
+            main { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>AUDITORIO PLATA</h1>
+    <h3>Laboratorio de condiciones de carrera</h3>
+    <p>10 solicitudes HTTP simultáneas | Aforo: 3</p>
+</header>
+
+<main>
+
+    <section class="panel">
+        <h2>Sin sincronización</h2>
+
+        <button class="inseguro" onclick="probar('sin')">
+            Ejecutar prueba sin sincronización
+        </button>
+
+        <div id="metricas-sin" class="metricas">
+            Sin ejecutar
+        </div>
+
+        <div class="tabla">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hilo</th>
+                        <th>Folio</th>
+                        <th>Estado</th>
+                        <th>ms</th>
+                    </tr>
+                </thead>
+                <tbody id="filas-sin"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Con Readers-Writers</h2>
+
+        <button class="seguro" onclick="probar('con')">
+            Ejecutar prueba sincronizada
+        </button>
+
+        <div id="metricas-con" class="metricas">
+            Sin ejecutar
+        </div>
+
+        <div class="tabla">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hilo</th>
+                        <th>Folio</th>
+                        <th>Estado</th>
+                        <th>ms</th>
+                    </tr>
+                </thead>
+                <tbody id="filas-con"></tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<script>
+async function probar(modo) {
+
+    const botones = document.querySelectorAll("button");
+    const metricas = document.getElementById(
+        "metricas-" + modo
+    );
+
+    botones.forEach(b => b.disabled = true);
+    metricas.textContent = "Ejecutando 10 solicitudes HTTP...";
+
+    try {
+        const respuesta = await fetch(
+            "/api/experimentar/" + modo,
+            { method: "POST" }
+        );
+
+        if (!respuesta.ok) {
+            throw new Error("Error HTTP " + respuesta.status);
+        }
+
+        const d = await respuesta.json();
+
+        metricas.innerHTML = `
+            <b>Aceptados:</b> ${d.aceptados}<br>
+            <b>Rechazados:</b> ${d.rechazados}<br>
+            <b>Errores:</b> ${d.errores}<br>
+            <b>Duplicados:</b> ${d.duplicados}<br>
+            <b>Contador final:</b> ${d.contador_final}<br>
+            <b>Duración:</b> ${d.duracion_s} s<br>
+            <b>Latencia promedio:</b>
+                ${d.latencia_promedio_ms} ms<br>
+            <b>Rendimiento:</b>
+                ${d.boletos_por_segundo} boletos/s
+        `;
+
+        const filas = d.registros.map(r => `
+            <tr>
+                <td>${r.hilo_id}</td>
+                <td>${r.folio || "—"}</td>
+                <td class="${
+                    r.estado === "EXITO" ? "exito" : "rechazo"
+                }">${r.estado}</td>
+                <td>${r.latencia_ms}</td>
+            </tr>
+        `).join("");
+
+        document.getElementById(
+            "filas-" + modo
+        ).innerHTML = filas;
+
+    } catch (error) {
+        metricas.textContent = error.message;
+    } finally {
+        botones.forEach(b => b.disabled = false);
+    }
+}
+</script>
+
+</body>
+</html>

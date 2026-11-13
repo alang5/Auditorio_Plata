@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Auditorio Plata</title>
+
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+</head>
+
+<body>
+
+    <header class="encabezado">
+        <div class="logo">AP</div>
+
+        <div>
+            <h1>AUDITORIO PLATA</h1>
+            <p>Sistema de boletos gratuitos</p>
+        </div>
+    </header>
+
+    <main class="contenedor">
+
+        <section class="presentacion">
+            <span class="etiqueta">EVENTO ESPECIAL</span>
+
+            <h2>Concierto Navideño</h2>
+
+            <p>
+                Celebra la magia de la Navidad
+                con una experiencia musical inolvidable.
+            </p>
+
+            <div class="datos-evento">
+                <span>Entrada gratuita</span>
+                <span>Aforo: 20,000 personas</span>
+            </div>
+        </section>
+
+        <section class="panel">
+
+            <div class="titulo-panel">
+                <h3>Disponibilidad de boletos</h3>
+                <span id="estado-servidor">
+                    Consultando...
+                </span>
+            </div>
+
+            <div class="estadisticas">
+                <div>
+                    <span>Lugares disponibles</span>
+                    <strong id="disponibles">--</strong>
+                </div>
+
+                <div>
+                    <span>Boletos emitidos</span>
+                    <strong id="emitidos">--</strong>
+                </div>
+            </div>
+
+            <div class="barra">
+                <div id="progreso"></div>
+            </div>
+
+            <p class="descripcion">
+                Los boletos se asignan por orden
+                de solicitud hasta agotar el aforo.
+            </p>
+
+            <button id="btn-boleto" disabled>
+                Solicitar boleto gratuito
+            </button>
+
+            <p id="mensaje" role="status"
+               aria-live="polite"></p>
+
+            <div id="resultado" class="oculto">
+
+                <h3>¡Boleto emitido!</h3>
+
+                <p>
+                    Tu folio:
+                    <strong id="folio"></strong>
+                </p>
+
+                <a id="descargar"
+                   class="boton-descargar"
+                   href="#">
+                    Descargar boleto PDF
+                </a>
+
+                <p class="nota">
+                    Conserva tu boleto y presenta
+                    el código QR para su validación.
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer>
+        Auditorio Plata · Sistema de boletos
+        <br>
+        Proyecto de Sistemas Operativos
+    </footer>
+
+</body>
+</html>

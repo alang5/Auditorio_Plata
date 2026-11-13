@@ -1,0 +1,232 @@
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #0b1120;
+    color: #ffffff;
+}
+
+.encabezado {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 24px 7%;
+    background: #111b31;
+    border-bottom: 1px solid #334155;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #dce3ed, #75849c);
+    color: #101827;
+    font-weight: bold;
+    font-size: 23px;
+}
+
+.encabezado h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: 2px;
+}
+
+.encabezado p {
+    color: #a8b6cb;
+    margin: 6px 0 0;
+    font-size: 13px;
+}
+
+.contenedor {
+    width: min(1100px, 90%);
+    margin: 65px auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 45px;
+    align-items: center;
+}
+
+.etiqueta {
+    color: #c5cfdd;
+    letter-spacing: 3px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.presentacion h2 {
+    font-size: clamp(38px, 5vw, 65px);
+    line-height: 1.1;
+    margin: 20px 0;
+}
+
+.presentacion p {
+    color: #b3c0d1;
+    font-size: 17px;
+    line-height: 1.7;
+}
+
+.datos-evento {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 30px;
+}
+
+.datos-evento span {
+    padding: 11px 16px;
+    border: 1px solid #475569;
+    border-radius: 25px;
+    color: #d7dee9;
+    font-size: 13px;
+}
+
+.panel {
+    padding: 32px;
+    background: #172238;
+    border: 1px solid #35435a;
+    border-radius: 18px;
+    box-shadow: 0 20px 60px #00000033;
+}
+
+.titulo-panel h3 {
+    margin: 0 0 10px;
+}
+
+#estado-servidor {
+    color: #9fb2cb;
+    font-size: 13px;
+}
+
+.estadisticas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.estadisticas div {
+    background: #0f192b;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.estadisticas span {
+    display: block;
+    color: #a9b9ce;
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+
+.estadisticas strong {
+    font-size: 29px;
+}
+
+.barra {
+    background: #344258;
+    border-radius: 12px;
+    height: 9px;
+    margin-top: 26px;
+    overflow: hidden;
+}
+
+#progreso {
+    background: linear-gradient(90deg, #899db9, #e2e8f0);
+    height: 100%;
+    width: 0%;
+    transition: width 0.4s;
+}
+
+.descripcion,
+.nota {
+    color: #a8b6cb;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+button,
+.boton-descargar {
+    width: 100%;
+    display: block;
+    padding: 16px;
+    text-align: center;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+button {
+    color: #101827;
+    background: #d5deea;
+    margin-top: 24px;
+}
+
+button:hover:not(:disabled) {
+    background: #ffffff;
+}
+
+button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+#mensaje {
+    margin-top: 16px;
+    color: #f0c5a5;
+}
+
+#resultado {
+    margin-top: 22px;
+    padding: 20px;
+    border-radius: 12px;
+    background: #153b36;
+    border: 1px solid #237464;
+    text-align: center;
+}
+
+#resultado h3 {
+    color: #a4f5d4;
+}
+
+.boton-descargar {
+    background: #b7e5d5;
+    color: #103b32;
+    margin-top: 18px;
+}
+
+.oculto {
+    display: none;
+}
+
+footer {
+    color: #8291a7;
+    text-align: center;
+    padding: 35px;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+@media (max-width: 760px) {
+    .contenedor {
+        grid-template-columns: 1fr;
+        margin: 35px auto;
+        gap: 30px;
+    }
+
+    .panel {
+        padding: 22px;
+    }
+
+    .encabezado {
+        padding: 20px 5%;
+    }
+}
