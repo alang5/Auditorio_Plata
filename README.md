@@ -3,7 +3,24 @@
 Sistema de emisión de boletos gratuitos para el
 Concierto Navideño.
 
-Aforo máximo: 20,000 personas.
+**Aforo máximo:** 20,000 personas.
+
+Proyecto académico de Sistemas Operativos. Su objetivo es emitir 100 boletos en 60 segundos o menos mediante solicitudes concurrentes, manteniendo la integridad de los folios y del aforo.
+
+## Funcionalidades
+
+- Consulta periódica de boletos emitidos y lugares disponibles.
+- Emisión gratuita de boletos GENERAL, PREFERENTE y VIP, con diseños PDF diferentes.
+- Código QR con los datos del evento, tipo de boleto, folio, fecha y hora de emisión.
+- Almacenamiento en Oracle y prevención de solicitudes duplicadas mediante `solicitud_id`.
+- Spawner multihilo configurable, bitácoras CSV y laboratorio de condiciones de carrera.
+
+## Repositorio y publicación
+
+- Repositorio: https://github.com/alang5/Auditorio_Plata
+- URL pública utilizada en la prueba del 26/11/2026: https://notified-balanced-say-farms.trycloudflare.com
+
+La URL pública pertenece a un túnel temporal y puede dejar de funcionar cuando se detiene o reinicia Cloudflare. Para una nueva ejecución, utilizar la URL que aparezca en la terminal del túnel (véase la sección 9).
 
 ## Tecnologías
 - Python
@@ -11,8 +28,58 @@ Aforo máximo: 20,000 personas.
 - Oracle Database
 - Readers-Writers
 - Threading
-- PDF y QR
+- HTML, CSS y JavaScript
+- ReportLab y qrcode
+- Requests
+- Cloudflare Tunnel
 
+
+## Arquitectura y sincronización
+
+```mermaid
+flowchart TD
+    A[Spawner multihilo] --> C[FastAPI / Uvicorn]
+    B[Navegador web] --> T[Cloudflare Tunnel]
+    T --> C
+    A -. Acceso público .-> T
+    C --> R[Readers-Writers]
+    R --> D[(Oracle Database Free)]
+    D --> R
+    R --> P[Generador PDF y QR]
+    P --> B
+    A --> L[Cola y consumidor de bitácora CSV]
+```
+
+El servidor utiliza Readers-Writers para permitir consultas simultáneas y garantizar que solo un escritor pueda emitir boletos a la vez. La sección crítica protege la asignación del folio y la actualización del aforo. Oracle refuerza esta protección mediante `SELECT ... FOR UPDATE`, la secuencia `seq_folio`, restricciones de integridad y transacciones.
+
+En el cliente, un semáforo limita las solicitudes simultáneas, una barrera coordina el arranque en modo ráfaga y una cola implementa productor–consumidor para guardar la bitácora mediante un hilo dedicado. En modo uniforme, el pool programa las solicitudes durante la ventana reservando 10 segundos de margen.
+
+La implementación de Readers-Writers da preferencia a los lectores; bajo una carga continua de lecturas puede existir espera prolongada de escritores.
+
+## Estructura del proyecto
+
+```text
+Auditorio_Plata/
+├── servidor/
+│   ├── main.py
+│   ├── database.py
+│   ├── readers_writers.py
+│   ├── boletos_pdf.py
+│   └── static/
+├── spawner/
+│   ├── spawner.py
+│   └── resultados/             # CSV generados localmente
+├── pruebas/
+│   ├── condicion_carrera.py
+│   ├── prueba_concurrencia.py
+│   ├── demo_web.py
+│   ├── demo_web.html
+│   └── resultados_demo_web/
+├── sql/
+│   └── esquema.sql
+├── requirements.txt
+└── README.md
+```
 
 ## Instalación y ejecución de Auditorio Plata
 
@@ -96,6 +163,15 @@ SQL*Plus solicitará la contraseña del usuario.
 
 > Este script se ejecuta solamente para inicializar una base de datos nueva. No debe ejecutarse nuevamente sobre tablas que ya contienen boletos.
 
+**Actualización de una instalación anterior:** si ya existe la tabla `boletos`, consultar `DESC boletos;`. Solo si todavía no existe la columna `TIPO_BOLETO`, ejecutar:
+
+```sql
+ALTER TABLE boletos
+ADD tipo_boleto VARCHAR2(20) DEFAULT 'GENERAL' NOT NULL;
+```
+
+Los boletos anteriores conservarán sus folios y quedarán con tipo GENERAL. El esquema actualizado ya incluye esa columna para las instalaciones nuevas.
+
 ### 5. Configurar las variables de entorno
 
 En la raíz del proyecto, crear un archivo llamado `.env`:
@@ -128,7 +204,13 @@ Abrir las siguientes direcciones:
 | http://127.0.0.1:8000/aforo | Consulta de disponibilidad |
 | http://127.0.0.1:8000/docs | Documentación de la API |
 
-La página permite consultar el aforo, solicitar boletos y descargar archivos PDF con códigos QR.
+La página permite consultar el aforo, seleccionar GENERAL, PREFERENTE o VIP y descargar el PDF con su código QR. El tipo se guarda en Oracle para conservar el diseño correcto en futuras descargas.
+
+| Método | Endpoint | Función |
+|---|---|---|
+| GET | `/aforo` | Consultar disponibilidad |
+| POST | `/boletos` | Emitir boleto (GENERAL por defecto) |
+| GET | `/boletos/{folio}/pdf` | Descargar el boleto por folio |
 
 Para detener el servidor, presionar `Ctrl + C`.
 
@@ -147,6 +229,10 @@ Para ejecutar una prueba en modo ráfaga:
 ```bash
 python -m spawner.spawner --solicitudes 100 --hilos 100 --concurrentes 10 --modo rafaga --ventana 60
 ```
+
+En modo ráfaga se recomienda configurar el mismo número de hilos y solicitudes, como en el ejemplo, para que la barrera reúna a todos los solicitantes iniciales.
+
+El spawner genera boletos GENERAL por defecto. El parámetro `--timeout` permite configurar el tiempo de espera de cada solicitud (15 segundos por defecto).
 
 El spawner utiliza hilos para realizar solicitudes HTTP al servidor y registra:
 
@@ -193,6 +279,13 @@ pruebas/resultados_demo_web/
 
 Este laboratorio utiliza un contador experimental en memoria y no modifica la base de datos Oracle.
 
+También se pueden ejecutar las pruebas de consola desde la raíz del proyecto:
+
+```bash
+python -m pruebas.condicion_carrera
+python -m pruebas.prueba_concurrencia
+```
+
 ### 9. Acceso público mediante Cloudflare Tunnel (opcional)
 
 Para acceder a la aplicación desde otra computadora o celular a través de internet, instalar `cloudflared`.
@@ -214,6 +307,14 @@ Cloudflare generará una URL HTTPS temporal con un formato similar a:
 ```text
 https://nombre-aleatorio.trycloudflare.com
 ```
+
+Para probar el spawner mediante internet, sustituir la URL del ejemplo por la URL activa del túnel:
+
+```powershell
+python -m spawner.spawner --url "https://nombre-aleatorio.trycloudflare.com" --solicitudes 100 --hilos 100 --concurrentes 10 --modo uniforme --ventana 60
+```
+
+No incluir espacios al final de la URL ni agregar `/boletos`, ya que el cliente añade esa ruta automáticamente.
 
 **Consideraciones:**
 
@@ -241,3 +342,64 @@ Para finalizar la ejecución:
 3. Detener Cloudflare Tunnel con `Ctrl + C`.
 
 Los datos almacenados en Oracle permanecen guardados después de detener la aplicación.
+
+
+## Resultados experimentales
+
+### Rendimiento de la versión final (26/11/2026)
+
+Configuración: 100 solicitudes, 100 hilos configurados, máximo de 10 solicitudes simultáneas, modo uniforme y ventana de 60 segundos.
+
+| Métrica | Localhost | Cloudflare |
+|---|---:|---:|
+| Boletos emitidos | 100 | 100 |
+| Rechazos | 0 | 0 |
+| Errores | 0 | 0 |
+| Folios duplicados | 0 | 0 |
+| Tiempo total | 49.58 s | 50.09 s |
+| Respuesta promedio | 69.98 ms | 597.46 ms |
+| Rendimiento | 2.02 boletos/s | 2.00 boletos/s |
+| Meta cumplida | Sí | Sí |
+
+Las dos pruebas cumplieron la meta. El acceso público aumentó la latencia promedio, pero la ejecución concurrente permitió mantener el tiempo total por debajo de 60 segundos.
+
+Bitácoras correspondientes: `bitacora_20261126_013744.csv` (local) y `bitacora_20261126_013938.csv` (Cloudflare), generadas en `spawner/resultados/`.
+
+### Condiciones de carrera
+
+Resultados del laboratorio experimental de 10 solicitudes con aforo de 3 lugares:
+
+| Métrica | Sin sincronización | Con Readers-Writers |
+|---|---:|---:|
+| Solicitudes aceptadas | 10 | 3 |
+| Solicitudes rechazadas | 0 | 7 |
+| Folios duplicados (repeticiones) | 9 | 0 |
+| Sobrecupo | 7 | 0 |
+
+El laboratorio muestra las consecuencias de acceder a un recurso compartido sin exclusión mutua. Con Readers-Writers se conserva el aforo y no se repiten folios.
+
+### Integridad de Oracle
+
+En la consulta del 26/11/2026 se registraron 418 boletos emitidos, 418 folios únicos, cero duplicados y 19,582 lugares disponibles. La lectura de los QR de las tres categorías fue comprobada por el equipo.
+
+Consultas de verificación (solo lectura):
+
+```sql
+SELECT nombre, aforo, emitidos, aforo - emitidos AS disponibles
+FROM eventos;
+
+SELECT COUNT(*) AS total_boletos,
+       COUNT(DISTINCT folio) AS folios_unicos,
+       COUNT(*) - COUNT(DISTINCT folio) AS duplicados
+FROM boletos;
+
+SELECT tipo_boleto, COUNT(*) AS cantidad
+FROM boletos
+GROUP BY tipo_boleto;
+```
+
+## Documentación y evidencias
+
+El reporte académico complementa este README con la justificación de los algoritmos, la comparación teórica con Peterson y la Panadería de Lamport, diagramas, resultados y muestras de boletos.
+
+Las bitácoras del spawner se generan localmente y su carpeta está excluida en `.gitignore`. Para entregar evidencias en GitHub, se pueden copiar únicamente los CSV seleccionados y el reporte a una carpeta `docs/`, revisando antes que no contengan información sensible.
