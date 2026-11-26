@@ -1,7 +1,7 @@
 """Boleto navideño A4 para Auditorio Plata.
 
 Mantiene exactamente la función utilizada por servidor/main.py:
-    crear_pdf_boleto(folio: int, evento: str, fecha_emision: datetime) -> bytes
+    crear_pdf_boleto(folio: int, evento: str, fecha_emision: datetime, tipo_boleto: str = "GENERAL") -> bytes
 
 El artista es ficticio y se usa solamente como demostración.
 """
@@ -153,7 +153,37 @@ def _rama(pdf, x, y, espejo=1):
     pdf.restoreState()
 
 
-def crear_pdf_boleto(folio: int, evento: str, fecha_emision: datetime) -> bytes:
+TEMAS = {
+    "GENERAL": {
+        "fondo": "#A8D4C3", "marco": "#FAF7EF", "tarjeta": "#FFFFFF",
+        "cabecera": "#124236", "acento": "#CFA35D", "titulo": "#195747",
+        "texto": "#23483D", "suave": "#66796D", "folio": "#D74D3E",
+        "caja": "#F4F8F1", "linea": "#D9E5D9", "subtitulo": "#EAD69D",
+    },
+    "PREFERENTE": {
+        "fondo": "#7A263B", "marco": "#D5D7DD", "tarjeta": "#FFF9FA",
+        "cabecera": "#631E31", "acento": "#C7C9CF", "titulo": "#7A263B",
+        "texto": "#382A32", "suave": "#6D5360", "folio": "#7A263B",
+        "caja": "#F0E9EE", "linea": "#D7C7CF", "subtitulo": "#E7E7EB",
+    },
+    "VIP": {
+        "fondo": "#141414", "marco": "#34302A", "tarjeta": "#222222",
+        "cabecera": "#111111", "acento": "#D4AF37", "titulo": "#F4DA86",
+        "texto": "#F8F2DD", "suave": "#D9CDA9", "folio": "#EAC95C",
+        "caja": "#34302A", "linea": "#62543A", "subtitulo": "#F4DA86",
+    },
+}
+
+
+def crear_pdf_boleto(folio: int, evento: str, fecha_emision: datetime, tipo_boleto: str = "GENERAL") -> bytes:
+    tipo_boleto = (tipo_boleto or "GENERAL").strip().upper()
+    if tipo_boleto not in TEMAS:
+        raise ValueError("Tipo de boleto no válido")
+    tema = TEMAS[tipo_boleto]
+
+    def color(nombre):
+        return colors.HexColor(tema[nombre])
+
     regular, bold, serif = _tipos()
     codigo = f"AP-{folio:06d}"
     fecha = fecha_emision.strftime("%d/%m/%Y")
@@ -165,6 +195,7 @@ def crear_pdf_boleto(folio: int, evento: str, fecha_emision: datetime) -> bytes:
         "AUDITORIO PLATA\n"
         f"Evento: {evento}\n"
         f"Artista: {ARTISTA}\n"
+        f"Tipo: {tipo_boleto}\n"
         f"Folio: {codigo}\n"
         f"Fecha: {fecha}\n"
         f"Hora: {hora}\n"
@@ -184,57 +215,59 @@ def crear_pdf_boleto(folio: int, evento: str, fecha_emision: datetime) -> bytes:
     pdf = canvas.Canvas(salida, pagesize=A4)
     w, h = A4
     centro = w / 2
-    pdf.setTitle(f"Boleto {codigo} - Auditorio Plata")
+    pdf.setTitle(f"Boleto {tipo_boleto} {codigo} - Auditorio Plata")
     pdf.setAuthor("Auditorio Plata")
 
     # Fondo crema y tarjeta principal; nada queda fuera de la hoja A4.
-    pdf.setFillColor(colors.HexColor("#A8D4C3"))
+    pdf.setFillColor(color("fondo"))
     pdf.rect(0, 0, w, h, stroke=0, fill=1)
-    pdf.setFillColor(CREMA)
+    pdf.setFillColor(color("marco"))
     pdf.roundRect(26, 30, w - 52, h - 60, 20, stroke=0, fill=1)
-    pdf.setFillColor(BLANCO)
+    pdf.setFillColor(color("tarjeta"))
     pdf.roundRect(37, 41, w - 74, h - 82, 15, stroke=0, fill=1)
-    pdf.setStrokeColor(DORADO)
+    pdf.setStrokeColor(color("acento"))
     pdf.setLineWidth(1.8)
     pdf.roundRect(37, 41, w - 74, h - 82, 15, stroke=1, fill=0)
 
     # Cabecera completamente dentro de la tarjeta.
-    pdf.setFillColor(VERDE_OSCURO)
+    pdf.setFillColor(color("cabecera"))
     pdf.roundRect(49, 679, w - 98, 102, 12, fill=1, stroke=0)
-    pdf.setFillColor(DORADO)
+    pdf.setFillColor(color("acento"))
     pdf.rect(49, 679, w - 98, 3, fill=1, stroke=0)
     pdf.setFillColor(BLANCO)
     _centrar(pdf, "AUDITORIO PLATA", centro, 737, serif, 25, 405)
-    pdf.setFillColor(colors.HexColor("#EAD69D"))
-    _centrar(pdf, "BOLETO NAVIDEÑO · ENTRADA GRATUITA", centro, 713, bold, 10, 430)
+    pdf.setFillColor(color("subtitulo"))
+    _centrar(pdf, f"BOLETO {tipo_boleto} · ENTRADA GRATUITA", centro, 713, bold, 10, 430)
     _rama(pdf, 65, 771, 1)
     _rama(pdf, w - 65, 771, -1)
 
-    pdf.setFillColor(colors.HexColor("#C75B49"))
+    pdf.setFillColor(color("folio"))
     pdf.setFont(bold, 9)
     pdf.drawCentredString(centro, 650, "EDICIÓN ESPECIAL DE NAVIDAD")
-    pdf.setFillColor(VERDE)
+    pdf.setFillColor(color("titulo"))
     _centrar(pdf, evento, centro, 619, serif, 24, 465)
 
-    pdf.setStrokeColor(colors.HexColor("#D9E5D9"))
+    pdf.setFillColor(color("texto"))
+    _centrar(pdf, f"Artista: {ARTISTA}", centro, 591, bold, 13, 465)
+    pdf.setStrokeColor(color("linea"))
     pdf.line(85, 563, w - 85, 563)
 
-    pdf.setFillColor(GRIS)
+    pdf.setFillColor(color("suave"))
     pdf.setFont(bold, 9)
     pdf.drawCentredString(centro, 544, "FOLIO DE ENTRADA")
-    pdf.setFillColor(ROJO)
+    pdf.setFillColor(color("folio"))
     pdf.setFont(bold, 19)
     pdf.drawCentredString(centro, 521, codigo)
 
     # Fecha y hora en cajas distintas, con márgenes seguros.
     for x in (78, 308):
-        pdf.setFillColor(colors.HexColor("#F4F8F1"))
+        pdf.setFillColor(color("caja"))
         pdf.roundRect(x, 447, 207, 55, 9, fill=1, stroke=0)
-    pdf.setFillColor(GRIS)
+    pdf.setFillColor(color("suave"))
     pdf.setFont(bold, 8.5)
     pdf.drawCentredString(181.5, 481, "FECHA DE EMISIÓN")
     pdf.drawCentredString(411.5, 481, "HORA DE EMISIÓN")
-    pdf.setFillColor(TEXTO)
+    pdf.setFillColor(color("texto"))
     _centrar(pdf, fecha, 181.5, 461, bold, 12, 187)
     _centrar(pdf, hora, 411.5, 461, bold, 11, 187)
 
@@ -249,19 +282,19 @@ def crear_pdf_boleto(folio: int, evento: str, fecha_emision: datetime) -> bytes:
     pdf.roundRect(qr_x - 8, qr_y - 8, qr_lado + 16, qr_lado + 16, 10, stroke=0, fill=1)
     pdf.drawImage(ImageReader(imagen_qr), qr_x, qr_y,
                   width=qr_lado, height=qr_lado, mask='auto')
-    pdf.setFillColor(GRIS)
+    pdf.setFillColor(color("suave"))
     _centrar(pdf, "ESCANEA TU CÓDIGO QR", qr_x + qr_lado/2, 184, bold, 9.2, 210)
 
-    pdf.setStrokeColor(colors.HexColor("#D7DFD4"))
+    pdf.setStrokeColor(color("linea"))
     pdf.setDash(4, 4)
     pdf.line(85, 153, w - 85, 153)
     pdf.setDash()
-    pdf.setFillColor(VERDE)
+    pdf.setFillColor(color("titulo"))
     pdf.setFont(bold, 10.5)
     pdf.drawCentredString(centro, 131, "ENTRADA GRATUITA")
-    pdf.setFillColor(GRIS)
+    pdf.setFillColor(color("suave"))
     _centrar(pdf, "Conserva tu boleto y presenta el QR al ingresar", centro, 113, regular, 9, 440)
-    pdf.setFillColor(VERDE_OSCURO)
+    pdf.setFillColor(color("titulo"))
     _centrar(pdf, "AUDITORIO PLATA · UNA NAVIDAD PARA RECORDAR", centro, 68, bold, 8.5, 445)
 
     pdf.save()

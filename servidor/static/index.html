@@ -75,6 +75,23 @@
 
             <div class="progress-track"><div id="progreso"></div></div>
             <p class="panel-note">Los boletos se asignan por orden de solicitud hasta completar el aforo.</p>
+            <fieldset class="tipos-boletos">
+              <legend>Selecciona tu tipo de boleto</legend>
+              <div class="opciones-boletos">
+                <label class="tipo-card general">
+                  <input type="radio" name="tipo_boleto" value="GENERAL" checked>
+                  <span><strong>General</strong><small>Acceso estándar</small></span>
+                </label>
+                <label class="tipo-card preferente">
+                  <input type="radio" name="tipo_boleto" value="PREFERENTE">
+                  <span><strong>Preferente</strong><small>Acceso privilegiado</small></span>
+                </label>
+                <label class="tipo-card vip">
+                  <input type="radio" name="tipo_boleto" value="VIP">
+                  <span><strong>VIP</strong><small>Experiencia exclusiva</small></span>
+                </label>
+              </div>
+            </fieldset>
             <button id="btn-boleto" class="primary-button" type="button" disabled>Solicitar mi boleto gratuito <span aria-hidden="true">→</span></button>
             <p id="mensaje" class="feedback" role="status" aria-live="polite"></p>
 
@@ -82,6 +99,7 @@
               <div class="result-icon" aria-hidden="true">✦</div>
               <h3>¡Tu boleto está listo!</h3>
               <p>Folio: <strong id="folio"></strong></p>
+              <p>Tipo: <strong id="tipo-resultado"></strong></p>
               <a id="descargar" class="download-button" href="#">Descargar boleto PDF <span aria-hidden="true">↧</span></a>
               <p class="result-note">Conserva el PDF y presenta su código QR al ingresar.</p>
             </div>

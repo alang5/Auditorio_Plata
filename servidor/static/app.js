@@ -10,10 +10,21 @@ const mensajeEl = document.getElementById("mensaje");
 const resultadoEl = document.getElementById("resultado");
 const folioEl = document.getElementById("folio");
 const descargarEl = document.getElementById("descargar");
+const tipoResultadoEl = document.getElementById("tipo-resultado");
+const opcionesTipo = document.querySelectorAll('input[name="tipo_boleto"]');
 
 let enviando = false;
 let hayDisponibilidad = false;
 let solicitudPendiente = null;
+let tipoPendiente = null;
+
+function actualizarControles() {
+    // Si hay una solicitud pendiente, se puede reintentar incluso con aforo agotado.
+    boton.disabled = enviando || (!hayDisponibilidad && !solicitudPendiente);
+    opcionesTipo.forEach(opcion => {
+        opcion.disabled = enviando || solicitudPendiente !== null;
+    });
+}
 
 
 // ========================================
@@ -50,7 +61,7 @@ async function consultarAforo() {
             ? "Sistema disponible"
             : "Aforo agotado";
 
-        boton.disabled = enviando || !hayDisponibilidad;
+        actualizarControles();
 
     } catch (error) {
 
@@ -58,7 +69,7 @@ async function consultarAforo() {
         disponiblesEl.textContent = "--";
         emitidosEl.textContent = "--";
         estadoEl.textContent = "Error de conexión";
-        boton.disabled = true;
+        actualizarControles();
 
         console.error(error);
     }
@@ -71,7 +82,7 @@ async function consultarAforo() {
 
 async function solicitarBoleto() {
 
-    if (enviando || !hayDisponibilidad) {
+    if (enviando || (!hayDisponibilidad && !solicitudPendiente)) {
         return;
     }
 
@@ -84,8 +95,11 @@ async function solicitarBoleto() {
 
     // Conservar el mismo ID si falla la red
     if (!solicitudPendiente) {
+        // Se conserva también el tipo de boleto en los reintentos.
+        tipoPendiente = document.querySelector('input[name="tipo_boleto"]:checked').value;
         solicitudPendiente = crypto.randomUUID();
     }
+    actualizarControles();
 
     try {
 
@@ -96,7 +110,8 @@ async function solicitarBoleto() {
             },
             body: JSON.stringify({
                 solicitud_id: solicitudPendiente,
-                hilo_id: "web"
+                hilo_id: "web",
+                tipo_boleto: tipoPendiente
             })
         });
 
@@ -104,8 +119,9 @@ async function solicitarBoleto() {
 
         if (!respuesta.ok) {
 
-            if (respuesta.status === 409) {
+            if (respuesta.status === 409 || respuesta.status === 400 || respuesta.status === 422) {
                 solicitudPendiente = null;
+                tipoPendiente = null;
             }
 
             throw new Error(
@@ -123,8 +139,10 @@ async function solicitarBoleto() {
         }
 
         solicitudPendiente = null;
+        tipoPendiente = null;
 
         folioEl.textContent = folio;
+        tipoResultadoEl.textContent = datos.tipo_boleto;
 
         descargarEl.href =
             "/boletos/" + Number(coincidencia[1]) + "/pdf";
@@ -136,11 +154,15 @@ async function solicitarBoleto() {
     } catch (error) {
 
         mensajeEl.textContent = error.message;
+        if (solicitudPendiente) {
+            mensajeEl.textContent += " Puedes reintentar la misma solicitud.";
+        }
 
     } finally {
 
         enviando = false;
-        boton.textContent = "Solicitar boleto gratuito";
+        boton.textContent = solicitudPendiente ? "Reintentar solicitud" : "Solicitar boleto gratuito";
+        actualizarControles();
 
         await consultarAforo();
     }

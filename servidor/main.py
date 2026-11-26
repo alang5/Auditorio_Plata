@@ -44,6 +44,7 @@ EVENTO_ID = 1
 class SolicitudBoleto(BaseModel):
     solicitud_id: UUID = Field(default_factory=uuid4)
     hilo_id: str = Field(default="manual", max_length=100)
+    tipo_boleto: str = "GENERAL"
 
 
 # ========================================
@@ -152,6 +153,14 @@ def consultar_aforo():
 @app.post("/boletos")
 def solicitar_boleto(datos: SolicitudBoleto):
 
+    tipo_boleto = datos.tipo_boleto.strip().upper()
+
+    if tipo_boleto not in ["GENERAL", "PREFERENTE", "VIP"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Tipo de boleto no válido"
+        )
+
     solicitud_id = str(datos.solicitud_id)
     hilo_id = datos.hilo_id
     hora_inicio = datetime.now(timezone.utc)
@@ -186,7 +195,7 @@ def solicitar_boleto(datos: SolicitudBoleto):
                         # Comprobar si esta solicitud
                         # ya había generado un boleto
                         cursor.execute("""
-                            SELECT folio, fecha_emision
+                            SELECT folio, fecha_emision, tipo_boleto
                             FROM boletos
                             WHERE solicitud_id = :sid
                         """, {"sid": solicitud_id})
@@ -195,7 +204,7 @@ def solicitar_boleto(datos: SolicitudBoleto):
 
                         if existente is not None:
 
-                            folio, fecha = existente
+                            folio, fecha, tipo_existente = existente
 
                             registrar_bitacora(
                                 cursor, solicitud_id,
@@ -213,7 +222,8 @@ def solicitar_boleto(datos: SolicitudBoleto):
                                     "mensaje": "Boleto existente",
                                     "folio": formato_folio(folio),
                                     "solicitud_id": solicitud_id,
-                                    "fecha_emision": fecha.isoformat()
+                                    "fecha_emision": fecha.isoformat(),
+                                    "tipo_boleto": tipo_existente
                                 }
                             )
 
@@ -246,17 +256,20 @@ def solicitar_boleto(datos: SolicitudBoleto):
                             INSERT INTO boletos (
                                 folio,
                                 evento_id,
-                                solicitud_id
+                                solicitud_id,
+                                tipo_boleto
                             )
                             VALUES (
                                 :folio,
                                 :evento_id,
-                                :solicitud_id
+                                :solicitud_id,
+                                :tipo_boleto
                             )
                         """, {
                             "folio": folio,
                             "evento_id": EVENTO_ID,
-                            "solicitud_id": solicitud_id
+                            "solicitud_id": solicitud_id,
+                            "tipo_boleto": tipo_boleto
                         })
 
                         # Actualizar aforo
@@ -294,6 +307,7 @@ def solicitar_boleto(datos: SolicitudBoleto):
                                 "folio": formato_folio(folio),
                                 "solicitud_id": solicitud_id,
                                 "fecha_emision": fecha.isoformat(),
+                                "tipo_boleto": tipo_boleto,
                                 "disponibles": aforo - emitidos - 1
                             }
                         )
@@ -338,7 +352,8 @@ def descargar_boleto(folio: int):
                         SELECT
                             b.folio,
                             b.fecha_emision,
-                            e.nombre
+                            e.nombre,
+                            b.tipo_boleto
                         FROM boletos b
                         INNER JOIN eventos e
                             ON b.evento_id = e.id
@@ -359,14 +374,15 @@ def descargar_boleto(folio: int):
             detail="Boleto no encontrado"
         )
 
-    numero, fecha, evento = boleto
+    numero, fecha, evento, tipo_boleto = boleto
 
     # Generar PDF fuera del bloqueo de lectura
     try:
         archivo_pdf = crear_pdf_boleto(
             folio=numero,
             evento=evento,
-            fecha_emision=fecha
+            fecha_emision=fecha,
+            tipo_boleto=tipo_boleto
         )
 
     except Exception:
@@ -375,7 +391,7 @@ def descargar_boleto(folio: int):
             detail="Error al generar el PDF"
         )
 
-    nombre_archivo = f"AP-{numero:06d}.pdf"
+    nombre_archivo = f"AP-{numero:06d}-{tipo_boleto}.pdf"
 
     return Response(
         content=archivo_pdf,

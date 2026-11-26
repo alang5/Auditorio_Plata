@@ -25,6 +25,7 @@ CREATE TABLE boletos (
     solicitud_id VARCHAR2(36) UNIQUE NOT NULL,
     fecha_emision TIMESTAMP WITH TIME ZONE
         DEFAULT SYSTIMESTAMP NOT NULL,
+    tipo_boleto VARCHAR2(20) DEFAULT 'GENERAL' NOT NULL,
     CONSTRAINT fk_evento
         FOREIGN KEY (evento_id)
         REFERENCES eventos(id)

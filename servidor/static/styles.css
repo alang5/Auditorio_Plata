@@ -212,3 +212,20 @@ a:focus-visible,button:focus-visible { outline: 3px solid #d85346; outline-offse
   .event-head h1 { overflow-wrap:normal; }
   .tree-illustration { width:min(100%,380px); }
 }
+
+
+/* Selección de tipo de boleto */
+.tipos-boletos { border:0; padding:0; margin:19px 0 0; min-width:0; }
+.tipos-boletos legend { color:#245747; font-size:13px; font-weight:800; margin-bottom:10px; }
+.opciones-boletos { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.tipo-card { display:flex; align-items:center; gap:6px; padding:11px 8px; border:2px solid transparent; border-radius:12px; cursor:pointer; color:#fff; background:#195747; }
+.tipo-card.preferente { background:#78263b; }
+.tipo-card.vip { background:#202020; color:#f4d784; }
+.tipo-card strong,.tipo-card small { display:block; }
+.tipo-card strong { font-size:13px; }
+.tipo-card small { font-size:10px; margin-top:4px; line-height:1.3; }
+.tipo-card input { flex:none; margin:0; accent-color:#d6a35b; }
+.tipo-card:has(input:checked) { border-color:#d6a35b; box-shadow:0 0 0 2px #d6a35b55; }
+.tipo-card:focus-within { outline:2px solid #195747; outline-offset:3px; }
+.tipo-card:has(input:disabled) { cursor:not-allowed; opacity:.75; }
+@media(max-width:520px) { .opciones-boletos { grid-template-columns:1fr; } .tipo-card { padding:12px; } }
